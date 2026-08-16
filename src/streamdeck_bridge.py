@@ -471,9 +471,19 @@ def main():
 
     client.loop_stop()
     client.disconnect()
-    with deck:
-        deck.reset()
-        deck.close()
+
+    # Beim Abschalten wegen eines toten USB-Zugriffs scheitert auch das
+    # Aufraeumen - reset() und close() schreiben ja aufs Geraet. Das ist dann
+    # kein Fehler, sondern die Folge des schon bekannten. Ohne diesen Fang
+    # endet der Dienst mit einer Ausnahme samt Stapelabzug im Protokoll, und
+    # systemd meldet "Failed with result 'exit-code'" statt eines geordneten
+    # Endes.
+    try:
+        with deck:
+            deck.reset()
+            deck.close()
+    except Exception:
+        log.info("Deck liess sich nicht mehr sauber schliessen - es ist weg")
     return 0
 
 
