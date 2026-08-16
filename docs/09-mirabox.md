@@ -269,4 +269,4 @@ betreibt, verliert früher oder später die Tasteneingabe.
 
 ---
 
-[← Zurück zur Übersicht](../README.md)
+[Kapitel 10 →](10-wlan-vpn.md) · [Übersicht](../README.md)

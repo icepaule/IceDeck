@@ -1,0 +1,53 @@
+#!/bin/sh
+# NetworkManager-Dispatcher fuer IceDeck.
+#
+# Aufgabe: den WireGuard-Tunnel ins Heimnetz genau dann laufen lassen, wenn der
+# Pi NICHT im Heim-WLAN haengt, sondern z.B. an einem Handy-Hotspot.
+#
+# Warum nicht einfach immer? Zu Hause ist das Heimnetz direkt erreichbar.
+# Ein aktiver Tunnel wuerde eine Route dorthin ueber wg0 legen; faellt der
+# Tunnel aus, ist der funktionierende direkte Weg mit begraben. Der Tunnel darf
+# also nur dann Routen setzen, wenn es keinen direkten Weg gibt.
+#
+# Installation:
+#   sudo install -o root -g root -m 755 90-icedeck-vpn \
+#        /etc/NetworkManager/dispatcher.d/90-icedeck-vpn
+#
+# NetworkManager fuehrt nur Skripte aus, die root gehoeren und fuer andere
+# nicht schreibbar sind - sonst koennte jeder Benutzer Code als root ausfuehren.
+
+IFACE="$1"
+AKTION="$2"
+
+HEIM_SSID="MEIN_HEIM_WLAN"   # <-- hier die eigene SSID eintragen
+UNIT="wg-quick@wg0"
+
+# Nur auf Ereignisse reagieren, die den Netzzustand wirklich aendern.
+case "$AKTION" in
+    up|down|connectivity-change|vpn-up|vpn-down) ;;
+    *) exit 0 ;;
+esac
+
+# Der Tunnel selbst erzeugt ebenfalls up/down-Ereignisse. Ohne diese Bremse
+# wuerde sich das Skript rekursiv selbst aufrufen.
+[ "$IFACE" = "wg0" ] && exit 0
+
+# Welches WLAN ist gerade aktiv? Das erste Feld ist "ja"/"nein" (aktiv),
+# das zweite die SSID.
+AKTIVE_SSID=$(nmcli -t -f ACTIVE,SSID device wifi list --rescan no 2>/dev/null \
+              | awk -F: '$1 == "yes" { print substr($0, index($0, ":") + 1); exit }')
+
+if [ "$AKTIVE_SSID" = "$HEIM_SSID" ]; then
+    # Zu Hause: Tunnel weg, direkter Weg genuegt.
+    systemctl is-active --quiet "$UNIT" && systemctl --no-block stop "$UNIT"
+    exit 0
+fi
+
+# Ohne jede Verbindung waere ein Tunnelversuch sinnlos - wg-quick scheitert
+# schon an der Namensaufloesung des Endpunkts.
+nmcli -t -f STATE general 2>/dev/null | grep -q '^connected' || exit 0
+
+# Fremdes Netz (Hotspot, Buero-WLAN): Tunnel hoch.
+systemctl is-active --quiet "$UNIT" || systemctl --no-block start "$UNIT"
+
+exit 0

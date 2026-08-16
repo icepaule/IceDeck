@@ -260,6 +260,34 @@ Startet der Dienst und stirbt wieder, war das Deck beim Start noch nicht bereit.
 Dann muss `StartLimitBurst=0` im Abschnitt **`[Unit]`** stehen — in `[Service]`
 wird es ignoriert. Siehe [Kapitel 4](04-bridge.md#systemd).
 
+## Unterwegs: Deck bleibt stumm, obwohl der Hotspot steht
+
+Der Reihe nach durchgehen — jede Stufe setzt die vorige voraus:
+
+```bash
+nmcli -t -f NAME device wifi list --rescan no | head -3  # welches WLAN?
+systemctl is-active wg-quick@wg0                         # laeuft der Tunnel?
+sudo wg show wg0 | grep handshake                        # steht die Gegenstelle?
+ip route get BROKER_IP                                   # geht es ueber wg0?
+```
+
+| Befund | Ursache |
+|---|---|
+| Hotspot taucht nicht auf | iPhone sendet auf 5 GHz — **„Kompatibilität maximieren"** einschalten, der Zero 2 W kann nur 2,4 GHz |
+| `wg-quick@wg0` inaktiv | Dispatcher hat nicht gegriffen: Rechte prüfen (`root:root`, `755`) oder SSID-Vergleich stimmt nicht |
+| kein Handshake | DynDNS-Name zeigt ins Leere oder UDP 51820 ist gesperrt — `systemctl restart wg-quick@wg0` löst den Namen neu auf |
+| Route geht über `wlan0` statt `wg0` | `AllowedIPs` im Client deckt das Heimnetz nicht ab |
+| alles grün, trotzdem nichts | Broker-Adresse in `config.json` zeigt noch auf das IoT-Netz statt aufs Heimnetz |
+
+Zu Hause muss `wg-quick@wg0` **inaktiv** sein. Ist er es nicht, greift der
+Dispatcher nicht — siehe [Kapitel 10](10-wlan-vpn.md#5--tunnel-nur-außerhalb-des-heim-wlans).
+
+## Ein Tastendruck ist verschwunden
+
+Kein Fehler, sondern eine bewusste Grenze: Die Bridge puffert nichts. War der
+Broker im Moment des Drucks nicht erreichbar, ist der Druck weg — erkennbar
+daran, dass sich das Tastenbild **nicht** ändert. Einfach nochmal drücken.
+
 ---
 
 [Weiter: 8 — Was schiefging →](08-lessons-learned.md)

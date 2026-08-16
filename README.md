@@ -115,6 +115,11 @@ demselben Flow, weil es ebenfalls 15 Tasten in 5×3 hat. Auf USB-Ebene ist es
 allerdings kein bisschen Elgato-kompatibel, egal was die Verpackung sagt. Was
 dafür nötig ist, steht in [Kapitel 9](docs/09-mirabox.md).
 
+**Ohne Heim-WLAN geht es auch.** Findet der Pi sein gewohntes Netz nicht, hängt
+er sich an einen Handy-Hotspot und holt sich den MQTT-Broker über einen engen
+WireGuard-Split-Tunnel nach Hause. Damit lassen sich Zeiten auch im Büro
+buchen — [Kapitel 10](docs/10-wlan-vpn.md).
+
 ## Schritt-für-Schritt-Anleitung
 
 Die vollständige Anleitung erklärt **jeden einzelnen Befehl**:
@@ -130,6 +135,7 @@ Die vollständige Anleitung erklärt **jeden einzelnen Befehl**:
 | [7 — Fehlersuche](docs/07-fehlersuche.md) | Symptome, Ursachen, Kommandos |
 | [8 — Was schiefging](docs/08-lessons-learned.md) | Die Fehler dieses Projekts, ehrlich aufgeschrieben |
 | [9 — MiraBox statt Elgato](docs/09-mirabox.md) | Anderes Gerät, andere Bibliothek, ein Seitenstreifen dazu |
+| [10 — Unterwegs: Hotspot und VPN](docs/10-wlan-vpn.md) | Zeiten auch im Büro buchen, ohne das Heim-WLAN |
 
 ## Dateien
 
@@ -142,6 +148,8 @@ Die vollständige Anleitung erklärt **jeden einzelnen Befehl**:
 | [`src/99-streamdeck.rules`](src/99-streamdeck.rules) | udev-Regel für Elgato, damit kein root nötig ist |
 | [`src/99-mirabox.rules`](src/99-mirabox.rules) | udev-Regel für MiraBox Stream Dock |
 | [`src/nodered-flow.json`](src/nodered-flow.json) | Toggle-Logik zum Importieren |
+| [`src/wg0.example.conf`](src/wg0.example.conf) | WireGuard-Split-Tunnel ins Heimnetz |
+| [`src/90-icedeck-vpn`](src/90-icedeck-vpn) | Dispatcher: Tunnel nur außerhalb des Heim-WLANs |
 | [`tools/solidtime-audit.py`](tools/solidtime-audit.py) | findet Einträge ohne Projekt |
 | [`tools/sd-backup.sh`](tools/sd-backup.sh) | dateisystembewusstes Karten-Backup |
 
@@ -158,6 +166,9 @@ ersetzt**. Vor dem Einsatz zu füllen:
 | `00000000-…-0000000MEMB1` | eigene `member_id` in dieser Organisation |
 | `00000000-…-0000000USER1` | eigene `user_id` |
 | `00000000-…-00000000PRJ0` … | Projekt-IDs je Taste |
+| `MEIN_HEIM_WLAN` | SSID des Heim-WLANs im Dispatcher-Skript |
+| `MEIN_DYNDNS_NAME` | DynDNS-Name des heimischen Anschlusses |
+| `HEIMNETZ/24` | Netz hinter dem VPN-Server, z. B. `192.168.178.0/24` |
 | `Projekt A` … `Projekt J` | Beschriftungen und Beschreibungstexte |
 
 Wie man die echten IDs ermittelt, steht in [Kapitel 6](docs/06-solidtime-api.md).
