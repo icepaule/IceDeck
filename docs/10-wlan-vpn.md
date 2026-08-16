@@ -169,8 +169,8 @@ ganz normaler Zugriff aus dem Heimnetz.
 Zwei Zeilen tragen die Last:
 
 ```ini
-# Split-Tunnel: NUR das Heimnetz laeuft durch den Tunnel.
-AllowedIPs = 192.168.178.0/24
+# Split-Tunnel: NUR das Heimnetz und das Tunnelnetz.
+AllowedIPs = 192.168.178.0/24, 10.6.0.0/24
 # Haelt die NAT-Zuordnung im Mobilfunknetz offen.
 PersistentKeepalive = 25
 ```
@@ -178,6 +178,21 @@ PersistentKeepalive = 25
 `AllowedIPs` ist bei WireGuard beides zugleich: die Liste erlaubter
 Absenderadressen **und** die Routingtabelle. Stünde hier `0.0.0.0/0`, liefe
 auch das Büro-Internet durch die heimische Leitung — langsam und unnötig.
+
+> **Das Tunnelnetz muss mit hinein.** Steht dort nur das Heimnetz, ist der Pi
+> unterwegs **nicht fernwartbar**, und die Ursache ist gut versteckt: Ein
+> `ssh` oder `ping` vom VPN-Server trägt als Absender dessen Tunneladresse
+> `10.6.0.1`. Die steht dann in keiner erlaubten Liste, also verwirft
+> WireGuard das Paket stillschweigend. `wg show` meldet dabei einen frischen
+> Handshake, der Tunnel sieht kerngesund aus — nur antwortet niemand.
+>
+> Prüfen lässt sich das mit einer erlaubten Quelladresse: `ping -I <LAN-IP des
+> Servers> 10.6.0.3` kommt durch, `ping 10.6.0.3` nicht. Nachträglich beheben
+> ohne den Tunnel zu unterbrechen:
+>
+> ```bash
+> sudo wg set wg0 peer SERVER_PUBKEY allowed-ips 192.168.178.0/24,10.6.0.0/24
+> ```
 
 `PersistentKeepalive` ist im Mobilfunk kein Luxus: Ohne Verkehr vergisst das
 Carrier-NAT die Zuordnung nach kurzer Zeit, und der Server kann den Pi nicht
@@ -297,6 +312,63 @@ sudo /etc/NetworkManager/dispatcher.d/90-icedeck-vpn wlan0 up
 sleep 4 && systemctl is-active wg-quick@wg0     # inactive
 ip route get BROKER_IP                          # wieder direkt über wlan0
 ```
+
+## Der Ernstfall-Test, ohne den Pi zu verlieren
+
+Wer das Heim-WLAN wirklich abschaltet, kappt damit auch die eigene
+SSH-Sitzung. Zwei Vorkehrungen machen das ungefährlich.
+
+**Erst ein Rückfahrschein.** Ein Einmal-Timer stellt das Heim-WLAN nach einer
+halben Stunde von selbst wieder her — auch dann, wenn gar nichts mehr geht:
+
+```bash
+sudo systemd-run --on-active=1800 --unit=wlan-rettung /bin/sh -c \
+  'nmcli connection modify HEIM_SSID connection.autoconnect yes;
+   nmcli connection up HEIM_SSID'
+```
+
+**Dann losgelöst umschalten.** Ohne `systemd-run` stirbt der Befehl mitten
+im Vorgang, weil er die eigene Verbindung abbaut, die ihn gerade transportiert:
+
+```bash
+sudo systemd-run --unit=wlan-test /bin/sh -c \
+  'nmcli connection modify HEIM_SSID connection.autoconnect no;
+   nmcli connection down HEIM_SSID'
+```
+
+NetworkManager greift dann zum Profil mit der nächsthöheren Priorität, der
+Dispatcher startet den Tunnel, und nach einer knappen Minute ist der Pi unter
+`10.6.0.3` wieder da. Kontrolle am VPN-Server, noch bevor man selbst
+hineinkommt — ein Endpunkt aus dem Mobilfunknetz beweist den Ortswechsel:
+
+```bash
+sudo wg show wg0
+# endpoint: 109.x.x.x:19396      <- Mobilfunk, nicht das eigene Netz
+# latest handshake: 1 minute, 1 second ago
+```
+
+Zurück geht es mit `autoconnect yes` und `nmcli connection up HEIM_SSID`;
+danach den Rettungs-Timer wegräumen:
+
+```bash
+sudo systemctl stop wlan-rettung.timer
+```
+
+## Fernwartung, während das Deck im Büro steht
+
+Am Hotspot bekommt der Pi eine Adresse aus dem Handy-Netz (beim iPhone
+`172.20.10.x`) — von zu Hause aus nicht erreichbar. Seine **Tunneladresse** ist
+es dagegen sehr wohl. Der VPN-Server dient als Sprungbrett:
+
+```bash
+ssh -J root@VPN_SERVER mpauli@10.6.0.3
+```
+
+`-J` baut nur eine TCP-Weiterleitung; die Anmeldung am Pi passiert Ende zu Ende,
+der Server sieht die Sitzung nicht im Klartext.
+
+Setzt das voraus, dass das Tunnelnetz in `AllowedIPs` steht — sonst
+verschwinden die Pakete lautlos, siehe Kasten oben.
 
 ## Was das nicht kann
 

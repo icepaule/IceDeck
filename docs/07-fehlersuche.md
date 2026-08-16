@@ -277,6 +277,7 @@ ip route get BROKER_IP                                   # geht es ueber wg0?
 | `wg-quick@wg0` inaktiv | Dispatcher hat nicht gegriffen: Rechte prüfen (`root:root`, `755`) oder SSID-Vergleich stimmt nicht |
 | kein Handshake | DynDNS-Name zeigt ins Leere oder UDP 51820 ist gesperrt — `systemctl restart wg-quick@wg0` löst den Namen neu auf |
 | Route geht über `wlan0` statt `wg0` | `AllowedIPs` im Client deckt das Heimnetz nicht ab |
+| Handshake frisch, aber kein `ping` vom VPN-Server durch | Das **Tunnelnetz** fehlt in `AllowedIPs` des Clients — der Server sendet mit Absender `10.6.0.1`, WireGuard verwirft das lautlos |
 | alles grün, trotzdem nichts | Broker-Adresse in `config.json` zeigt noch auf das IoT-Netz statt aufs Heimnetz |
 
 Zu Hause muss `wg-quick@wg0` **inaktiv** sein. Ist er es nicht, greift der
