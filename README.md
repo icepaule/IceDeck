@@ -7,6 +7,13 @@ Das Deck hängt an einem Raspberry Pi Zero 2 W statt am Windows-Rechner. Ein
 Tastendruck startet, stoppt oder wechselt die Zeiterfassung. Auf den Tasten
 steht, woran heute wie lange gearbeitet wurde. Der Rechner darf aus bleiben.
 
+![IceDeck im Betrieb auf einem MiraBox Stream Dock](docs/bilder/mirabox-im-betrieb.jpeg)
+
+*IceDeck im Betrieb. Grün umrandet und mit mitlaufender Zeit: das gerade
+gebuchte Projekt. Blau oben rechts die Tagessumme. Rechts der Seitenstreifen
+mit Uhrzeit, Tagessumme und Statusampel. Die Projektnamen sind hier
+unkenntlich gemacht.*
+
 ![Tastenbelegung](docs/bilder/tastenbelegung.svg)
 
 ## Warum überhaupt

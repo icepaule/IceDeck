@@ -7,6 +7,12 @@ IceDeck läuft auch mit einem **MiraBox Stream Dock**. Getestet mit dem
 
 ## Welches Gerät genau
 
+![MiraBox Stream Dock im Betrieb](bilder/mirabox-im-betrieb.jpeg)
+
+*Das getestete Gerät im Betrieb. Links die 15 Tasten in 5×3, rechts der
+schmale Streifen mit Uhrzeit, Tagessumme und Statusampel. Die dritte
+Tastenreihe ist unbelegt und bleibt dunkel.*
+
 Damit sich ein baugleiches Modell nachbestellen lässt, hier die vollständige
 Kennung des getesteten Geräts:
 
@@ -300,6 +306,26 @@ werden gezeichnet, keine Taste meldet sich. Der zweite kostet zusätzlich
 Rechenzeit und flutet das Protokoll.
 
 **Die Lehre: Ein Fang, der nicht unterscheidet, verschiebt den Ausfall nur.**
+
+```mermaid
+flowchart TD
+    A[Lesevorgang] --> B{Ausnahme?}
+    B -->|nein| C[Zaehler auf 0<br/>Tastendruck melden]
+    B -->|KeyError| D[verwerfen<br/>Zaehler unveraendert]
+    B -->|sonstige| E[Zaehler + 1]
+    E --> F{erster Fehler?}
+    F -->|ja| G[Warnung mit Stapelabzug]
+    F -->|nein| H{10 in Folge?}
+    H -->|nein| I[still weiterlesen]
+    H -->|ja| J[SIGTERM an sich selbst]
+    J --> K[systemd startet neu<br/>Geraet frisch geoeffnet]
+
+    style C fill:#3ddc84,color:#000
+    style D fill:#3ddc84,color:#000
+    style J fill:#ff6b6b,color:#000
+    style K fill:#ffd93d,color:#000
+```
+
 Die beiden Fehler haben nichts gemeinsam:
 
 | | `KeyError` | `TransportError` |
