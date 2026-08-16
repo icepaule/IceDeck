@@ -283,6 +283,12 @@ Fehlern zwischen erfolgreichen Lesevorgängen, ist nichts zu tun; die Meldung
 Wiederholt sich das ständig, liegt es meist am Kabel oder am OTG-Adapter, nicht
 an der Software. Hintergrund: [Kapitel 9](09-mirabox.md#wenn-verschlucken-die-falsche-antwort-ist).
 
+**`error -71` ist das entscheidende Merkmal.** Steht die Zeile im
+Kernelprotokoll, ist die Anmeldung unterwegs gescheitert und der Dienst muss
+neu starten — das erledigt er selbst. Fehlt sie, war es eine saubere
+Neuanmeldung, und die Bibliothek fängt sich ohne Neustart wieder. Nachgemessen:
+derselbe Prozess überstand das ohne einen einzigen Lesefehler.
+
 ## Unterwegs: Deck bleibt stumm, obwohl der Hotspot steht
 
 Der Reihe nach durchgehen — jede Stufe setzt die vorige voraus:

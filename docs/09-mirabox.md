@@ -351,6 +351,32 @@ und das gibt es am einfachsten über `Restart=always` in der Unit. Das Signal
 geht bewusst durch den regulären Abschaltpfad, damit MQTT sauber getrennt und
 das Deck geschlossen wird.
 
+### Nicht jede Neuanmeldung braucht das
+
+Die Bibliothek bringt mit `_read_with_resume_from_suspend` einen eigenen
+Wiederaufnahme-Pfad mit. Meldet sich das Gerät **sauber** ab und wieder an,
+greift der von selbst — im Versuch überstand derselbe Prozess eine
+Neuanmeldung ohne einen einzigen Fehler und ohne Neustart:
+
+```
+usb 1-1: USB disconnect, device number 2
+usb 1-1: new high-speed USB device number 3 using dwc_otg
+usb 1-1: New USB device found, idVendor=5548, idProduct=6670
+```
+
+Der Unterschied liegt in der Anmeldung selbst. Scheitert sie unterwegs, bleibt
+ein halb aufgebauter Zustand zurück, aus dem die Bibliothek nicht
+herausfindet — daran erkennbar:
+
+```
+usb 1-1: device descriptor read/all, error -71
+```
+
+**Merkmal für die Fehlersuche:** `error -71` im Kernelprotokoll heißt, dass der
+Neustart des Dienstes nötig sein wird. Eine Neuanmeldung ohne diese Zeile
+übersteht die Bridge allein. In beiden Fällen liegt die Ursache aber am Kabel
+oder am OTG-Adapter, nicht an der Software.
+
 Zwei Details, die den Unterschied machen:
 
 **Nur der erste Fehler bekommt den vollen Stapelabzug.** Sonst ertränkt eine
