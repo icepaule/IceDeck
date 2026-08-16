@@ -215,7 +215,7 @@ Fassung der Bridge. Sofortige Abhilfe in jedem Fall:
 sudo systemctl restart icedeck
 ```
 
-Hintergrund in [Kapitel 9](09-mirabox.md#der-toedliche-lesefehler).
+Hintergrund in [Kapitel 9](09-mirabox.md#der-tödliche-lesefehler).
 
 ## Deck flackert, Pi startet neu
 

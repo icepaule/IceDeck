@@ -170,7 +170,7 @@ Zwei Zeilen tragen die Last:
 
 ```ini
 # Split-Tunnel: NUR das Heimnetz und das Tunnelnetz.
-AllowedIPs = 192.168.178.0/24, 10.6.0.0/24
+AllowedIPs = HEIMNETZ/24, 10.6.0.0/24
 # Haelt die NAT-Zuordnung im Mobilfunknetz offen.
 PersistentKeepalive = 25
 ```
@@ -191,7 +191,7 @@ auch das Büro-Internet durch die heimische Leitung — langsam und unnötig.
 > ohne den Tunnel zu unterbrechen:
 >
 > ```bash
-> sudo wg set wg0 peer SERVER_PUBKEY allowed-ips 192.168.178.0/24,10.6.0.0/24
+> sudo wg set wg0 peer SERVER_PUBKEY allowed-ips HEIMNETZ/24,10.6.0.0/24
 > ```
 
 `PersistentKeepalive` ist im Mobilfunk kein Luxus: Ohne Verkehr vergisst das

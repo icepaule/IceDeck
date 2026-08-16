@@ -53,4 +53,11 @@ Fertig. Naechste Schritte:
 
 Test ohne Dienst:
   SDB_CONFIG=$CFG/config.json $APP/venv/bin/python $APP/streamdeck_bridge.py
+
+Danach fehlt noch Node-RED - ohne den Flow passiert bei einem Tastendruck
+nichts: docs/05-nodered.md
+
+Wahlweise:
+  MiraBox statt Elgato ..................... docs/09-mirabox.md
+  Zeiten unterwegs buchen (Hotspot + VPN) .. docs/10-wlan-vpn.md
 EOF

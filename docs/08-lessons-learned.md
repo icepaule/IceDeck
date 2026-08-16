@@ -155,6 +155,30 @@ Taste, die Bridge addiert den laufenden Abschnitt.
 **Merke:** Bei Zeiterfassung ist fast immer die **Tagessumme** gemeint, nicht
 der aktuelle Abschnitt.
 
+### Ein zu weiter Fang verschiebt den Ausfall nur
+
+Die Bibliothek warf bei einer Befehlsquittung einen `KeyError`, der den
+Lesethread beendete: Dienst lief weiter, Tasten stumm. Die Abhilfe fing
+daraufhin **jede** Ausnahme ab und gab `None` zurück.
+
+Als sich das Gerät später neu am USB-Bus anmeldete, war der Zugriff ungültig
+und **jeder** Lesevorgang scheiterte. Der Fang verschluckte auch das: rund 17
+Fehler je Sekunde, über tausend Protokollzeilen je Minute — und die Tasten
+blieben trotzdem stumm.
+
+Aus einem toten Thread war ein leer drehender geworden. Von außen sehen beide
+identisch aus.
+
+**Merke:** Vor jedem `except Exception` die Frage stellen, ob der Zustand nach
+dem Fang wirklich wieder gesund ist. Trifft das nicht zu, ist Weitermachen die
+falsche Antwort — dann gehört der Ausfall **sichtbar** gemacht oder der Prozess
+beendet, damit ein Neustart greift. Hier: `KeyError` verschlucken,
+Transportfehler zählen und ab zehn in Folge aufgeben.
+
+Erwähnenswert ist auch, wie der Fehler auffiel — nicht durch eine Meldung,
+sondern beim Nachsehen im Protokoll aus einem ganz anderen Anlass. Ein
+Ausfall, der nichts meldet, wird nicht gefunden, sondern gestolpert.
+
 ### `StartLimitBurst` im falschen Abschnitt
 
 Stand in `[Service]`, gehört in `[Unit]`. Dort wird es stillschweigend ignoriert.
@@ -192,6 +216,15 @@ Zeiterfassung fällt erst bei der Abrechnung auf.
 - **Rückmeldung bei Fehlern auf dem Deck.** Scheitert ein API-Aufruf, merkt man
   es derzeit nur im Node-RED-Log. Ein roter Rahmen auf der betroffenen Taste
   wäre besser.
+- **Tastendrücke puffern.** Ist der Broker nicht erreichbar — Funkloch, Hotspot
+  aus, Tunnel im Aufbau —, geht der Druck verloren. Sichtbar ist das nur daran,
+  dass sich das Tastenbild nicht ändert. Bewusst nicht nachgerüstet: Ein
+  nachgesendeter Start mit falschem Zeitstempel wäre schlimmer als ein
+  verlorener Druck, den man sofort bemerkt. Für längeren Betrieb außer Haus
+  wäre ein Puffer **mit Originalzeitstempel** aber sinnvoll.
+- **Warum sich das Gerät neu am USB anmeldet, ist ungeklärt.** Die
+  Stromversorgung war es nachweislich nicht. Nach dem Neustecken von Kabel und
+  OTG-Adapter trat es nicht mehr auf, ein Beweis ist das aber nicht.
 
 ---
 
