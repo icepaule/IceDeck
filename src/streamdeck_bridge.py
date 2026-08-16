@@ -25,6 +25,7 @@ import os
 import signal
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
@@ -416,18 +417,53 @@ def ticker_durchlauf(deck, cfg):
         redraw_secondary(deck, cfg)
 
 
+def deck_suchen(wartezeit=60, takt=5):
+    """Wartet auf das Deck, statt beim ersten Fehlversuch aufzugeben.
+
+    Sofort aufzugeben ist teuer: systemd startet den Dienst nach fuenf Sekunden
+    neu, und bei nicht gestecktem Deck wiederholt sich das endlos - gemessen
+    ueber 500 Neustarts je Stunde, jeder mit einer eigenen Fehlerzeile. Echte
+    Meldungen gehen darin unter.
+
+    Bewusst mit Zeitgrenze statt endlos: Laeuft der Dienst dauerhaft weiter,
+    ohne je ein Geraet zu haben, meldet systemd ihn als gesund, obwohl nichts
+    funktioniert - genau die Art stiller Ausfall, die dieses Projekt schon
+    zweimal Zeit gekostet hat. So bleibt der Fehler sichtbar, kostet aber nur
+    noch einen Neustart je Minute statt zehn.
+
+    Nebeneffekt: Wird das Deck waehrend des Wartens gesteckt, greift der Dienst
+    es binnen Sekunden ab, ohne auf den naechsten Neustart zu warten.
+    """
+    ende = time.monotonic() + wartezeit
+    gemeldet = False
+    while True:
+        decks = DeviceManager().enumerate()
+        if decks:
+            if gemeldet:
+                log.info("Deck ist da")
+            return decks[0]
+        if not gemeldet:
+            log.warning(
+                "Kein Stream Deck gefunden - warte bis zu %d s "
+                "(USB gesteckt? Datenkabel, nicht nur Ladekabel? udev-Regel aktiv?)",
+                wartezeit,
+            )
+            gemeldet = True
+        if time.monotonic() >= ende:
+            return None
+        time.sleep(takt)
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
     )
     cfg = load_config(CONFIG_PATH)
 
-    decks = DeviceManager().enumerate()
-    if not decks:
-        log.error("Kein Stream Deck gefunden (USB gesteckt? udev-Regel aktiv?)")
+    deck = deck_suchen()
+    if deck is None:
+        log.error("Kein Stream Deck gefunden - gebe auf, systemd startet neu")
         return 1
-
-    deck = decks[0]
     lesethread_absichern(deck)   # muss vor open() greifen, dort startet der Thread
     deck.open()
     deck.reset()

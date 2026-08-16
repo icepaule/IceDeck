@@ -74,13 +74,11 @@ WLAN scheitert. Das spart oft eine halbe Stunde Netzwerkarchäologie.
 lsusb
 ```
 
-Fehlt die Zeile mit `0fd9`:
-
-| Ursache | Abhilfe |
-|---|---|
-| Deck an `PWR IN` statt `USB` | umstecken — `PWR IN` hat keine Datenleitungen |
-| OTG-Adapter defekt oder ein reines Ladekabel | anderen Adapter probieren |
-| zu wenig Strom | `vcgencmd get_throttled` prüfen |
+Fehlt die Zeile mit `0fd9` (Elgato) beziehungsweise `5548` (MiraBox), hängt
+nichts am Bus — die Ursachen stehen unter
+[Deck zeigt sein eigenes Hintergrundbild](#deck-zeigt-sein-eigenes-hintergrundbild-statt-der-tasten).
+Zusätzlich die Stromversorgung prüfen, `vcgencmd get_throttled` muss `0x0`
+melden.
 
 Ist das Deck da, der Dienst kommt aber nicht heran:
 
@@ -259,6 +257,34 @@ sudo systemctl enable icedeck
 Startet der Dienst und stirbt wieder, war das Deck beim Start noch nicht bereit.
 Dann muss `StartLimitBurst=0` im Abschnitt **`[Unit]`** stehen — in `[Service]`
 wird es ignoriert. Siehe [Kapitel 4](04-bridge.md#systemd).
+
+## Deck zeigt sein eigenes Hintergrundbild statt der Tasten
+
+Das ist die Werksanzeige des Geräts: **Strom ja, Daten nein.** Ein Blick genügt:
+
+```bash
+lsusb            # steht das Deck ueberhaupt am Bus?
+```
+
+Fehlt es dort, ist nichts angeschlossen, was der Kernel sieht. Zur Gegenprobe
+das Kernelprotokoll — beim Anstecken muss `host mode` erscheinen:
+
+```bash
+sudo dmesg -T | grep -E "usb 1-1|host mode"
+```
+
+Kommt gar nichts, liegt es an der Verkabelung. Der Reihe nach:
+
+| Ursache | Woran man es merkt |
+|---|---|
+| **Ladekabel statt Datenkabel** | häufigste Ursache; das Deck leuchtet, meldet sich aber nie |
+| Stecker nicht ganz drin | die Stromkontakte im USB-Stecker sind länger als die Datenkontakte — halb eingesteckt heißt Strom ohne Daten. Nach einem Gehäusewechsel besonders wahrscheinlich, wenn das Gehäuse auf den Stecker drückt |
+| Falscher Micro-USB-Port | am Zero führt `PWR IN` **nur** Strom. Ein Gerät dort bekommt 5 V über die Platine zurück und leuchtet, hängt aber an keinem Controller |
+| OTG-Adapter defekt oder nicht gesteckt | dasselbe Bild |
+
+Der Dienst wartet in diesem Fall bis zu 60 Sekunden auf das Deck und greift es
+ab, sobald es auftaucht — ein Neustart von Hand ist nach dem Umstecken nicht
+nötig.
 
 ## Protokoll läuft mit Lesefehlern voll
 
