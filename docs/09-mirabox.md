@@ -191,20 +191,81 @@ verrät zugleich, dass rohe Pixel erwartet werden.
 
 Schwerwiegender: Während der Übertragung **stirbt der Lesethread** mit
 `KeyError: 0` in `_read_control_states`. Danach meldet keine Taste mehr etwas.
-Offenbar wird die Bestätigung des Bildbefehls als Tastenereignis fehlgedeutet.
 
-Für einen kosmetischen Hintergrund ist das ein schlechtes Geschäft: Die
-Zeiterfassung würde stumm. Wer es trotzdem will, sollte das Bild **einmal beim
-Dienststart** setzen — nach `reset()`, vor den Tastenbildern — und den
-Lesefehler abfangen.
+Für einen kosmetischen Hintergrund bleibt das ein schlechtes Geschäft — er wäre
+ohnehin nur in den Tastenlücken sichtbar. Wer es trotzdem will, sollte das Bild
+**einmal beim Dienststart** setzen, nach `reset()` und vor den Tastenbildern.
+
+## Der tödliche Lesefehler
+
+Auch ohne Hintergrundbild ist dieser Fehler eine Zeitbombe, deshalb fängt
+IceDeck ihn ab. Die Ursache:
+
+```python
+if device_input_data and device_input_data.startswith(Mirabox.ACK_OK):
+    triggered_raw_key = device_input_data[9]
+    triggered_key = self.DEVICE_KEY_ID_TO_KEY_NUM[triggered_raw_key]   # KeyError
+```
+
+Gültige Tastenkennungen sind `0x01` bis `0x0f`. Die **Quittung eines
+Befehls** beginnt aber ebenfalls mit `ACK_OK` und trägt an Byte 9 eine `0` —
+die steht in keiner Zuordnung. Die Ausnahme fliegt bis in den Lesethread und
+beendet ihn.
+
+Das Tückische daran: Der Dienst läuft weiter, die Tastenbilder werden weiter
+gezeichnet, MQTT bleibt verbunden. Nur **Tastendrücke kommen nicht mehr an**.
+Nichts im Protokoll deutet darauf hin.
+
+IceDeck setzt dagegen zwei Sicherungen, beide in `streamdeck_bridge.py` und
+**nicht** in der Bibliothek — ein Patch in `site-packages` wäre beim nächsten
+`pip install --upgrade` verloren:
+
+**1. Der Fang.** `lesethread_absichern()` legt sich vor `_read_control_states`
+und verwirft Antworten ohne Tastenkennung, statt sie eskalieren zu lassen:
+
+```python
+def sicher(self):
+    try:
+        return original(self)
+    except KeyError as e:
+        log.debug("Geraeteantwort ohne Tastenkennung verworfen (%s)", e)
+        return None
+    except Exception:
+        log.warning("Lesen der Tastenzustaende fehlgeschlagen", exc_info=True)
+        return None
+```
+
+`None` ist der reguläre Rückgabewert für „nichts passiert" — der Thread wartet
+kurz und liest weiter. Der Fang muss **vor** `deck.open()` greifen, denn dort
+wird der Thread gestartet.
+
+**2. Der Wächter.** Sollte der Thread doch einmal sterben, prüft der
+Zehn-Sekunden-Takt seinen Zustand und setzt ihn neu auf:
+
+```python
+if not lesethread_lebt(deck):
+    lesethread_wiederbeleben(deck)
+```
+
+Ein Gerät ohne Lesethread (der Elgato-Pfad kennt das Attribut nicht) gilt dabei
+als gesund, damit kein Fehlalarm entsteht.
+
+Nachgewiesen wurde beides gegen ein nachgebautes Gerät, das genau die tödliche
+Antwort liefert: ungeschützt `KeyError: 0`, mit Fang dreimal sauberes `None`,
+Wächter erkennt lebenden, toten und fehlenden Thread korrekt, Wiederbelebung
+startet einen neuen und lässt sich sauber beenden.
 
 ## Bekannte Einschränkungen
 
 - Die 293S-Unterstützung nennt sich im Quelltext selbst „non-official"
 - Die fehlenden Assets müssen nach jedem Bibliotheks-Update neu angelegt werden
-- `set_screen_image` ist praktisch unbenutzbar, solange der Lesethread daran stirbt
 - Ob andere Modelle (293, N3, N4) laufen, wurde nicht geprüft — die Bibliothek
   kennt sie, getestet wurde nur das 293S
+- Der Seitenstreifen hat nur drei Felder; mehr gibt die Firmware nicht her
+
+Behoben, aber erwähnenswert: Der `KeyError` im Lesethread wird abgefangen, die
+Ursache liegt aber weiter in der Bibliothek. Wer IceDeck ohne diese Absicherung
+betreibt, verliert früher oder später die Tasteneingabe.
 
 ---
 

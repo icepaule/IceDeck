@@ -195,6 +195,28 @@ Ein Eintrag von unter einer Minute wird als `0:00` angezeigt, weil das Format
 Sekunden sind auf einer 72×72-Taste nicht lesbar und laden nur zum Draufstarren
 ein.
 
+## Tasten reagieren gar nicht mehr, Dienst laeuft aber (MiraBox)
+
+Typisches Bild: Die Tastenbilder werden weiter gezeichnet, MQTT ist verbunden,
+das Protokoll zeigt nichts Auffaelliges — aber kein Tastendruck kommt mehr an.
+
+Das ist der Lesethread der MiraBox-Klasse, der an einer Geraetequittung
+gestorben ist. IceDeck faengt das ab und startet den Thread notfalls neu; im
+Protokoll steht dann:
+
+```
+Lesethread war tot und wurde neu gestartet
+```
+
+Fehlt beim Start die Zeile `Lesethread abgesichert (...)`, laeuft eine zu alte
+Fassung der Bridge. Sofortige Abhilfe in jedem Fall:
+
+```bash
+sudo systemctl restart icedeck
+```
+
+Hintergrund in [Kapitel 9](09-mirabox.md#der-toedliche-lesefehler).
+
 ## Deck flackert, Pi startet neu
 
 Unterspannung.

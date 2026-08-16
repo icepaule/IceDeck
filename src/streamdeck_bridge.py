@@ -207,6 +207,61 @@ def render_key(deck, cfg, key, snapshot):
     return PILHelper.to_native_key_format(deck, image)
 
 
+def lesethread_absichern(deck):
+    """Verhindert, dass eine unerwartete Geraeteantwort den Lesethread toetet.
+
+    Die MiraBox-Klasse liest Byte 9 einer Antwort als Tastenkennung und schlaegt
+    sie in DEVICE_KEY_ID_TO_KEY_NUM nach. Gueltig sind 0x01 bis 0x0f. Die
+    Bestaetigung eines Bildbefehls beginnt aber ebenfalls mit ACK_OK und traegt
+    dort eine 0 - das ergibt einen KeyError. Die Ausnahme fliegt bis in den
+    Lesethread und beendet ihn; danach meldet keine Taste mehr etwas, obwohl
+    der Dienst weiterlaeuft.
+
+    Bewusst hier und nicht in site-packages gepatcht: eine Aenderung an der
+    Bibliothek waere beim naechsten pip install --upgrade verloren.
+    """
+    klasse = type(deck)
+    if getattr(klasse, "_sdb_lesefang", False):
+        return
+    if not hasattr(klasse, "_read_control_states"):
+        return
+
+    original = klasse._read_control_states
+
+    def sicher(self):
+        try:
+            return original(self)
+        except KeyError as e:
+            # Keine Taste, sondern eine Quittung o.ae. - stillschweigend
+            # verwerfen, damit der Thread weiterlaeuft.
+            log.debug("Geraeteantwort ohne Tastenkennung verworfen (%s)", e)
+            return None
+        except Exception:
+            log.warning("Lesen der Tastenzustaende fehlgeschlagen", exc_info=True)
+            return None
+
+    klasse._read_control_states = sicher
+    klasse._sdb_lesefang = True
+    log.info("Lesethread abgesichert (%s)", klasse.__name__)
+
+
+def lesethread_lebt(deck):
+    t = getattr(deck, "read_thread", None)
+    return t is None or t.is_alive()
+
+
+def lesethread_wiederbeleben(deck):
+    """Notnagel, falls der Thread doch einmal stirbt: neu aufsetzen."""
+    try:
+        ziel = getattr(deck, "_read_with_resume_from_suspend", None) or deck._read
+        deck._setup_reader(ziel)
+        log.warning("Lesethread war tot und wurde neu gestartet")
+        return True
+    except Exception:
+        log.error("Lesethread liess sich nicht neu starten", exc_info=True)
+        return False
+
+
 def hat_seitenstreifen(deck):
     """MiraBox 293S hat drei zusaetzliche 80x80-Felder am Rand.
 
@@ -301,6 +356,8 @@ def on_state_message(deck, cfg, msg):
 def ticker(deck, cfg, stop_event):
     """Haelt Laufzeit und Tagesanzeige aktuell, solange ein Timer laeuft."""
     while not stop_event.wait(10):
+        if not lesethread_lebt(deck):
+            lesethread_wiederbeleben(deck)
         with state_lock:
             running = laeuft_etwas(state)
         if running:
@@ -325,6 +382,7 @@ def main():
         return 1
 
     deck = decks[0]
+    lesethread_absichern(deck)   # muss vor open() greifen, dort startet der Thread
     deck.open()
     deck.reset()
     deck.set_brightness(cfg.get("brightness", 60))
