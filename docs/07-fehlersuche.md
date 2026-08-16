@@ -260,6 +260,29 @@ Startet der Dienst und stirbt wieder, war das Deck beim Start noch nicht bereit.
 Dann muss `StartLimitBurst=0` im Abschnitt **`[Unit]`** stehen — in `[Service]`
 wird es ignoriert. Siehe [Kapitel 4](04-bridge.md#systemd).
 
+## Protokoll läuft mit Lesefehlern voll
+
+```
+WARNING Lesen der Tastenzustaende fehlgeschlagen
+StreamDeck.Transport.Transport.TransportError: Failed to read in report (-1)
+```
+
+Das Gerät hat sich neu am USB-Bus angemeldet, der Zugriff der Bridge gilt nicht
+mehr. Nachsehen, wann:
+
+```bash
+sudo dmesg -T | grep -iE "usb disconnect|new high-speed|error -71" | tail
+vcgencmd get_throttled     # 0x0 = Strom war nicht die Ursache
+```
+
+Ab zehn Fehlern in Folge beendet sich der Dienst selbst und systemd startet ihn
+neu — im Protokoll steht dann `Lesefehler in Folge`. Bleibt es bei einzelnen
+Fehlern zwischen erfolgreichen Lesevorgängen, ist nichts zu tun; die Meldung
+`Lesen der Tastenzustaende funktioniert wieder` bestätigt das.
+
+Wiederholt sich das ständig, liegt es meist am Kabel oder am OTG-Adapter, nicht
+an der Software. Hintergrund: [Kapitel 9](09-mirabox.md#wenn-verschlucken-die-falsche-antwort-ist).
+
 ## Unterwegs: Deck bleibt stumm, obwohl der Hotspot steht
 
 Der Reihe nach durchgehen — jede Stufe setzt die vorige voraus:

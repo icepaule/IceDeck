@@ -219,6 +219,17 @@ def lesethread_absichern(deck):
 
     Bewusst hier und nicht in site-packages gepatcht: eine Aenderung an der
     Bibliothek waere beim naechsten pip install --upgrade verloren.
+
+    WICHTIG ist die Unterscheidung der beiden Fehlerarten: Ein KeyError ist
+    harmlos und darf verschluckt werden. Ein Transportfehler dagegen bedeutet,
+    dass der USB-Zugriff nicht mehr gilt - etwa weil sich das Geraet neu am Bus
+    angemeldet hat. Dann scheitert JEDER weitere Lesevorgang, und Verschlucken
+    macht aus einem toten Lesethread einen leer drehenden: gemessen rund 17
+    Fehler je Sekunde, ueber tausend Protokollzeilen je Minute, und die Tasten
+    bleiben trotzdem stumm. Deshalb wird nach GRENZE_TOT aufeinanderfolgenden
+    Fehlern der Dienst beendet - systemd startet ihn neu und oeffnet das Geraet
+    dabei frisch. Das ist der einzige Weg zurueck; ein neuer Lesethread auf dem
+    alten, ungueltigen Zugriff wuerde genauso leer drehen.
     """
     klasse = type(deck)
     if getattr(klasse, "_sdb_lesefang", False):
@@ -228,17 +239,43 @@ def lesethread_absichern(deck):
 
     original = klasse._read_control_states
 
+    # Ein einzelner Fehlschlag kann eine Stoerung sein; erst eine Serie belegt,
+    # dass der Zugriff dauerhaft hinueber ist. Bei ~17 Lesevorgaengen je Sekunde
+    # entspricht die Grenze weniger als einer Sekunde Wartezeit.
+    GRENZE_TOT = 10
+
     def sicher(self):
         try:
-            return original(self)
+            ergebnis = original(self)
         except KeyError as e:
             # Keine Taste, sondern eine Quittung o.ae. - stillschweigend
             # verwerfen, damit der Thread weiterlaeuft.
             log.debug("Geraeteantwort ohne Tastenkennung verworfen (%s)", e)
             return None
         except Exception:
-            log.warning("Lesen der Tastenzustaende fehlgeschlagen", exc_info=True)
+            n = getattr(self, "_sdb_lesefehler", 0) + 1
+            self._sdb_lesefehler = n
+            if n == 1:
+                # Nur der erste Fehler bekommt den vollen Stapelabzug, sonst
+                # ertraenkt eine Stoerung das Protokoll.
+                log.warning("Lesen der Tastenzustaende fehlgeschlagen", exc_info=True)
+            elif n >= GRENZE_TOT and not getattr(self, "_sdb_aufgegeben", False):
+                self._sdb_aufgegeben = True
+                log.error(
+                    "%d Lesefehler in Folge - der USB-Zugriff gilt nicht mehr. "
+                    "Dienst wird beendet, systemd startet ihn mit frischem "
+                    "Geraetezugriff neu.", n
+                )
+                # Ueber das regulaere Abschaltsignal, damit der bestehende
+                # Aufraeumpfad in main() greift (MQTT trennen, Deck schliessen).
+                os.kill(os.getpid(), signal.SIGTERM)
             return None
+
+        # Ein erfolgreicher Lesevorgang setzt die Serie zurueck.
+        if getattr(self, "_sdb_lesefehler", 0):
+            log.info("Lesen der Tastenzustaende funktioniert wieder")
+            self._sdb_lesefehler = 0
+        return ergebnis
 
     klasse._read_control_states = sicher
     klasse._sdb_lesefang = True
@@ -356,18 +393,27 @@ def on_state_message(deck, cfg, msg):
 def ticker(deck, cfg, stop_event):
     """Haelt Laufzeit und Tagesanzeige aktuell, solange ein Timer laeuft."""
     while not stop_event.wait(10):
-        if not lesethread_lebt(deck):
-            lesethread_wiederbeleben(deck)
-        with state_lock:
-            running = laeuft_etwas(state)
-        if running:
-            redraw(deck, cfg)
-        else:
-            # Auch im Ruhezustand muss die Uhr auf dem Seitenstreifen
-            # weiterlaufen. Nur die drei kleinen Felder neu zeichnen - alle
-            # 15 Tastenbilder alle 10 s zu erneuern, waere auf einem Zero 2 W
-            # unnoetige Dauerlast.
-            redraw_secondary(deck, cfg)
+        try:
+            ticker_durchlauf(deck, cfg)
+        except Exception:
+            # Ohne diesen Fang beendet ein einzelner Zeichenfehler den Thread.
+            # Die Uhr bliebe dann fuer immer stehen, waehrend Dienst und Tasten
+            # weiterlaufen - wieder ein Ausfall, den niemand bemerkt.
+            log.warning("Durchlauf der Anzeige fehlgeschlagen", exc_info=True)
+
+
+def ticker_durchlauf(deck, cfg):
+    if not lesethread_lebt(deck):
+        lesethread_wiederbeleben(deck)
+    with state_lock:
+        running = laeuft_etwas(state)
+    if running:
+        redraw(deck, cfg)
+    else:
+        # Auch im Ruhezustand muss die Uhr auf dem Seitenstreifen weiterlaufen.
+        # Nur die drei kleinen Felder neu zeichnen - alle 15 Tastenbilder alle
+        # 10 s zu erneuern, waere auf einem Zero 2 W unnoetige Dauerlast.
+        redraw_secondary(deck, cfg)
 
 
 def main():

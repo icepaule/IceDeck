@@ -92,7 +92,7 @@ ein an einem anderen Gerät gestarteter Timer, nachträglich zugewiesene Projekt
 
 | Teil | Anmerkung |
 |---|---|
-| Stream Deck | Elgato 15 Tasten (`0fd9:006d`) **oder** MiraBox Stream Dock 293S (`5548:6670`) |
+| Stream Deck | Elgato 15 Tasten (`0fd9:006d`) **oder** MiraBox Visual Stream Deck Black, Verpackung `HSV 239S`, meldet sich als Stream Dock 293S (`5548:6670`) |
 | Raspberry Pi Zero 2 W | 2,4 GHz WLAN, ARM64-fähig |
 | Micro-USB-OTG-Adapter | für den Port `USB` |
 | Netzteil 5 V / mindestens 2,5 A | **nicht** der USB-Port eines Rechners, siehe unten |

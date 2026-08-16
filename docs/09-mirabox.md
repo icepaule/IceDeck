@@ -5,6 +5,32 @@
 IceDeck läuft auch mit einem **MiraBox Stream Dock**. Getestet mit dem
 **293S** — dieselbe Bridge, derselbe Node-RED-Flow, dieselbe Tastenbelegung.
 
+## Welches Gerät genau
+
+Damit sich ein baugleiches Modell nachbestellen lässt, hier die vollständige
+Kennung des getesteten Geräts:
+
+| | |
+|---|---|
+| Handelsname | **MiraBox Visual Stream Deck Black** |
+| Modell laut Verpackung | **HSV 239S** |
+| Hersteller | MiraBox (Product Mbox), Hersteller-Software unter `key123.vip` |
+| Meldet sich als | **Stream Dock 293S** |
+| USB-Kennung | `5548:6670` |
+| Firmware | `V2.293S.00.003` |
+| Tasten | 15 in 5×3, Tastenbild 85×85 JPEG, 90° gedreht |
+| Seitenstreifen | drei Felder à 80×80, reine Anzeige |
+
+> **Achtung, zwei verschiedene Nummern.** Auf der Verpackung steht `HSV 239S`,
+> das Gerät selbst meldet `293S` — die Ziffern sind vertauscht. Wer nach „239S"
+> sucht, findet Angebote; wer Software oder Bibliotheken sucht, muss nach
+> **„Stream Dock 293S"** suchen. Beim Bestellen ist die maßgebliche Angabe
+> **15 Tasten in 5×3 plus seitlicher Streifen**.
+
+Die Bibliothek kennt außerdem `293`, `N3`, `N4` und `N4EN` (siehe udev-Regel
+unten). Ob die laufen, wurde **nicht** geprüft. Sicher ist nur: Ein Modell mit
+derselben 5×3-Anordnung braucht keine Änderung an Flow oder Tastenbelegung.
+
 ## „Elgato-kompatibel" stimmt nicht, wie man denkt
 
 MiraBox bewirbt seine Geräte als Elgato-kompatibel. Gemeint ist die
@@ -250,6 +276,68 @@ if not lesethread_lebt(deck):
 Ein Gerät ohne Lesethread (der Elgato-Pfad kennt das Attribut nicht) gilt dabei
 als gesund, damit kein Fehlalarm entsteht.
 
+## Wenn Verschlucken die falsche Antwort ist
+
+Der erste Entwurf dieser Absicherung fing **jede** Ausnahme ab und gab `None`
+zurück. Im Betrieb zeigte sich, warum das zu grob ist.
+
+Das Gerät meldete sich unvermittelt neu am USB-Bus an:
+
+```
+usb 1-1: USB disconnect, device number 4
+usb 1-1: device descriptor read/all, error -71
+usb 1-1: New USB device found, idVendor=5548, idProduct=6670
+```
+
+Damit war der Zugriff der Bridge ungültig — **jeder** weitere Lesevorgang
+scheiterte mit `TransportError: Failed to read in report (-1)`. Der Fang
+verschluckte auch das. Ergebnis: rund **17 Fehler je Sekunde**, über tausend
+Protokollzeilen je Minute, und die Tasten blieben trotzdem stumm.
+
+Aus einem tot liegenden Lesethread war ein leer drehender geworden. Beide
+Zustände sehen von außen gleich aus: Dienst `active`, MQTT verbunden, Bilder
+werden gezeichnet, keine Taste meldet sich. Der zweite kostet zusätzlich
+Rechenzeit und flutet das Protokoll.
+
+**Die Lehre: Ein Fang, der nicht unterscheidet, verschiebt den Ausfall nur.**
+Die beiden Fehler haben nichts gemeinsam:
+
+| | `KeyError` | `TransportError` |
+|---|---|---|
+| Bedeutet | eine Quittung, keine Taste | der USB-Zugriff gilt nicht mehr |
+| Tritt auf | vereinzelt, im Normalbetrieb | ab jetzt bei **jedem** Lesevorgang |
+| Richtige Antwort | verschlucken | aufgeben und neu starten |
+
+IceDeck zählt deshalb **aufeinanderfolgende** Fehler, die kein `KeyError` sind.
+Ein erfolgreicher Lesevorgang setzt den Zähler zurück. Erst eine Serie belegt,
+dass der Zugriff dauerhaft hinüber ist:
+
+```python
+elif n >= GRENZE_TOT and not getattr(self, "_sdb_aufgegeben", False):
+    self._sdb_aufgegeben = True
+    log.error("%d Lesefehler in Folge - der USB-Zugriff gilt nicht mehr. ...", n)
+    os.kill(os.getpid(), signal.SIGTERM)
+```
+
+Warum beenden statt neu verbinden? Weil ein neuer Lesethread auf demselben
+ungültigen Zugriff genauso leer drehen würde. Nur ein frisches `open()` hilft,
+und das gibt es am einfachsten über `Restart=always` in der Unit. Das Signal
+geht bewusst durch den regulären Abschaltpfad, damit MQTT sauber getrennt und
+das Deck geschlossen wird.
+
+Zwei Details, die den Unterschied machen:
+
+**Nur der erste Fehler bekommt den vollen Stapelabzug.** Sonst ertränkt eine
+Störung das Protokoll, bevor man die Ursache lesen kann.
+
+**Die Grenze liegt bei zehn.** Bei rund 17 Lesevorgängen je Sekunde ist das
+weniger als eine Sekunde — schnell genug, dass niemand es merkt, und weit genug
+weg von einer einzelnen Störung.
+
+Dieselbe Überlegung gilt für den Zehn-Sekunden-Takt: Bricht dort das Zeichnen
+ab, stirbt der Thread und die Uhr steht für immer still, während Dienst und
+Tasten weiterlaufen. Auch das ist jetzt gefangen und protokolliert.
+
 Nachgewiesen wurde beides gegen ein nachgebautes Gerät, das genau die tödliche
 Antwort liefert: ungeschützt `KeyError: 0`, mit Fang dreimal sauberes `None`,
 Wächter erkennt lebenden, toten und fehlenden Thread korrekt, Wiederbelebung
@@ -266,6 +354,12 @@ startet einen neuen und lässt sich sauber beenden.
 Behoben, aber erwähnenswert: Der `KeyError` im Lesethread wird abgefangen, die
 Ursache liegt aber weiter in der Bibliothek. Wer IceDeck ohne diese Absicherung
 betreibt, verliert früher oder später die Tasteneingabe.
+
+Ebenfalls behoben: Meldet sich das Gerät neu am USB-Bus an, beendet sich der
+Dienst und wird von systemd neu gestartet. Das dauert rund zwei Sekunden, in
+denen keine Taste reagiert. Warum das Gerät sich neu anmeldet, ist ungeklärt —
+die Stromversorgung war es nachweislich nicht (`vcgencmd get_throttled`
+meldete `0x0`).
 
 ---
 
