@@ -1,0 +1,14 @@
+# MiraBox Stream Dock - alle vier bekannten Hersteller-IDs der Baureihe.
+# Welche ein Geraet benutzt, haengt vom Modell ab:
+#   0x5500  Stream Dock 293
+#   0x5548  Stream Dock 293S
+#   0x6602  Stream Dock N4
+#   0x6603  Stream Dock N3, N4EN
+SUBSYSTEM=="usb",    ATTRS{idVendor}=="5500", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="5500", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb",    ATTRS{idVendor}=="5548", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="5548", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb",    ATTRS{idVendor}=="6602", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="6602", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb",    ATTRS{idVendor}=="6603", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="6603", MODE="0660", GROUP="plugdev", TAG+="uaccess"

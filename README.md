@@ -92,7 +92,7 @@ ein an einem anderen Gerät gestarteter Timer, nachträglich zugewiesene Projekt
 
 | Teil | Anmerkung |
 |---|---|
-| Elgato Stream Deck | hier ein 15-Tasten-Modell (`0fd9:006d`, „Stream Deck Original V2") |
+| Stream Deck | Elgato 15 Tasten (`0fd9:006d`) **oder** MiraBox Stream Dock 293S (`5548:6670`) |
 | Raspberry Pi Zero 2 W | 2,4 GHz WLAN, ARM64-fähig |
 | Micro-USB-OTG-Adapter | für den Port `USB` |
 | Netzteil 5 V / mindestens 2,5 A | **nicht** der USB-Port eines Rechners, siehe unten |
@@ -110,6 +110,11 @@ Ein ESP32 kommt übrigens nicht in Frage: ESP32, C3 und C6 haben überhaupt kein
 USB-Host, und für den S3 gibt es keine brauchbare HID-Host-Bibliothek für
 herstellerspezifische Geräte wie das Stream Deck.
 
+**Auch ein MiraBox Stream Dock 293S funktioniert** — mit derselben Bridge und
+demselben Flow, weil es ebenfalls 15 Tasten in 5×3 hat. Auf USB-Ebene ist es
+allerdings kein bisschen Elgato-kompatibel, egal was die Verpackung sagt. Was
+dafür nötig ist, steht in [Kapitel 9](docs/09-mirabox.md).
+
 ## Schritt-für-Schritt-Anleitung
 
 Die vollständige Anleitung erklärt **jeden einzelnen Befehl**:
@@ -124,6 +129,7 @@ Die vollständige Anleitung erklärt **jeden einzelnen Befehl**:
 | [6 — Die Solidtime-API](docs/06-solidtime-api.md) | Vier Fallen, die Zeit kosten |
 | [7 — Fehlersuche](docs/07-fehlersuche.md) | Symptome, Ursachen, Kommandos |
 | [8 — Was schiefging](docs/08-lessons-learned.md) | Die Fehler dieses Projekts, ehrlich aufgeschrieben |
+| [9 — MiraBox statt Elgato](docs/09-mirabox.md) | Anderes Gerät, andere Bibliothek, ein Seitenstreifen dazu |
 
 ## Dateien
 
@@ -133,7 +139,8 @@ Die vollständige Anleitung erklärt **jeden einzelnen Befehl**:
 | [`src/config.example.json`](src/config.example.json) | MQTT-Zugang und Tastenbelegung |
 | [`src/install.sh`](src/install.sh) | venv, Pakete, udev, systemd in einem Durchgang |
 | [`src/icedeck.service`](src/icedeck.service) | systemd-Unit mit `Restart=always` |
-| [`src/99-streamdeck.rules`](src/99-streamdeck.rules) | udev-Regel, damit kein root nötig ist |
+| [`src/99-streamdeck.rules`](src/99-streamdeck.rules) | udev-Regel für Elgato, damit kein root nötig ist |
+| [`src/99-mirabox.rules`](src/99-mirabox.rules) | udev-Regel für MiraBox Stream Dock |
 | [`src/nodered-flow.json`](src/nodered-flow.json) | Toggle-Logik zum Importieren |
 | [`tools/solidtime-audit.py`](tools/solidtime-audit.py) | findet Einträge ohne Projekt |
 | [`tools/sd-backup.sh`](tools/sd-backup.sh) | dateisystembewusstes Karten-Backup |

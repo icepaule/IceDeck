@@ -30,7 +30,15 @@ from datetime import datetime, timezone
 import paho.mqtt.client as mqtt
 from PIL import Image, ImageDraw, ImageFont
 from StreamDeck.DeviceManager import DeviceManager
-from StreamDeck.ImageHelpers import PILHelper
+
+# python-elgato-streamdeck nennt den Bildhelfer PILHelper, der MiraBox-faehige
+# Fork python-streamdoeck nennt ihn NativeImageHelper. Die benutzten Funktionen
+# heissen in beiden gleich, daher genuegt der Namenswechsel - so laeuft dieselbe
+# Datei mit Elgato- und MiraBox-Geraeten.
+try:
+    from StreamDeck.ImageHelpers import PILHelper
+except ImportError:
+    from StreamDeck.ImageHelpers import NativeImageHelper as PILHelper
 
 CONFIG_PATH = os.environ.get("SDB_CONFIG", "/etc/streamdeck-solidtime/config.json")
 
@@ -199,12 +207,67 @@ def render_key(deck, cfg, key, snapshot):
     return PILHelper.to_native_key_format(deck, image)
 
 
+def hat_seitenstreifen(deck):
+    """MiraBox 293S hat drei zusaetzliche 80x80-Felder am Rand.
+
+    Elgato-Geraete haben nichts dergleichen, und die Elgato-Bibliothek kennt
+    die noetigen Funktionen nicht - beides wird hier geprueft, damit dieselbe
+    Datei mit beiden Geraetefamilien laeuft.
+    """
+    return (
+        getattr(deck, "SECONDARY_IMAGE_COUNT", 0) > 0
+        and hasattr(deck, "set_secondary_image")
+        and hasattr(PILHelper, "create_secondary_image")
+    )
+
+
+def render_secondary(deck, cfg, index, snapshot):
+    """Feld 0 Uhrzeit, Feld 1 Tagessumme, Feld 2 Statusampel."""
+    laeuft = laeuft_etwas(snapshot)
+    image = PILHelper.create_secondary_image(deck, background="#14161c")
+    draw = ImageDraw.Draw(image)
+    w, h = image.size
+
+    if index == 0:
+        draw.text((w / 2, h / 2), datetime.now().strftime("%H:%M"),
+                  font=load_font(24), anchor="mm", fill="#e8eaed")
+    elif index == 1:
+        draw.text((w / 2, h / 2 - 10), "HEUTE",
+                  font=load_font(12), anchor="mm", fill="#9aa0a6")
+        draw.text((w / 2, h / 2 + 12), hms(today_total(snapshot), force_hours=True),
+                  font=load_font(22), anchor="mm",
+                  fill="#3ddc84" if laeuft else "#e8eaed")
+    else:
+        r = 11
+        draw.ellipse([w / 2 - r, h / 2 - r - 10, w / 2 + r, h / 2 + r - 10],
+                     fill="#3ddc84" if laeuft else "#5f6368")
+        draw.text((w / 2, h - 12), "laeuft" if laeuft else "gestoppt",
+                  font=load_font(12), anchor="ms",
+                  fill="#3ddc84" if laeuft else "#9aa0a6")
+
+    return PILHelper.to_native_secondary_image_format(deck, image)
+
+
+def redraw_secondary(deck, cfg):
+    if not hat_seitenstreifen(deck):
+        return
+    with state_lock:
+        snapshot = dict(state)
+    with deck:
+        for i in range(deck.SECONDARY_IMAGE_COUNT):
+            try:
+                deck.set_secondary_image(i, render_secondary(deck, cfg, i, snapshot))
+            except Exception:
+                log.warning("Seitenfeld %s liess sich nicht zeichnen", i, exc_info=True)
+
+
 def redraw(deck, cfg):
     with state_lock:
         snapshot = dict(state)
     with deck:
         for key in range(deck.key_count()):
             deck.set_key_image(key, render_key(deck, cfg, key, snapshot))
+    redraw_secondary(deck, cfg)
 
 
 def on_key_press(client, cfg, key, pressed):
@@ -242,6 +305,12 @@ def ticker(deck, cfg, stop_event):
             running = laeuft_etwas(state)
         if running:
             redraw(deck, cfg)
+        else:
+            # Auch im Ruhezustand muss die Uhr auf dem Seitenstreifen
+            # weiterlaufen. Nur die drei kleinen Felder neu zeichnen - alle
+            # 15 Tastenbilder alle 10 s zu erneuern, waere auf einem Zero 2 W
+            # unnoetige Dauerlast.
+            redraw_secondary(deck, cfg)
 
 
 def main():

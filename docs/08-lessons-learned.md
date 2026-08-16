@@ -195,4 +195,4 @@ Zeiterfassung fällt erst bei der Abrechnung auf.
 
 ---
 
-[← Zurück zur Übersicht](../README.md)
+[Weiter: 9 — MiraBox statt Elgato →](09-mirabox.md)
