@@ -1,0 +1,14 @@
+# Niemals einchecken: echte Zugangsdaten und Kennungen
+config.json
+solidtime.json
+*.env
+zuordnung*.json
+*.vorher.json
+
+# Abbilder und Sicherungen
+*.img
+*.img.*
+SHA256SUMS
+
+__pycache__/
+*.pyc

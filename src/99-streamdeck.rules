@@ -1,0 +1,6 @@
+# Elgato Stream Deck ohne root ansprechbar machen (VID 0fd9).
+# Nach /etc/udev/rules.d/ kopieren, dann:
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+# Deck einmal ab- und wieder anstecken, damit die Regel greift.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", MODE="0660", GROUP="plugdev", TAG+="uaccess"

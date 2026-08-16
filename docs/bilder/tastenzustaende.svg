@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="598" height="302" viewBox="0 0 598 302" role="img" aria-label="Die drei Zustaende einer Projekttaste">
+<style>text{font-family:"DejaVu Sans",Verdana,sans-serif}</style>
+<rect width="598" height="302" rx="18" fill="#14161c"/>
+<text x="299.0" y="32" text-anchor="middle" fill="#8b93a1" font-size="16">Die drei Zustaende einer Projekttaste</text>
+<rect x="30" y="60" width="150" height="150" rx="14" fill="#1f7a3d"/>
+<rect x="33" y="63" width="144" height="144" rx="11" fill="none" stroke="#3ddc84" stroke-width="6"/>
+<text x="105.0" y="168" text-anchor="middle" fill="#3ddc84" font-size="30" font-weight="bold">0:43</text>
+<text x="105.0" y="196" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold">Projekt A</text>
+<text x="105.0" y="240" text-anchor="middle" fill="#8b93a1" font-size="14">laeuft gerade</text>
+<rect x="224" y="60" width="150" height="150" rx="14" fill="#0b83d9"/>
+<text x="299.0" y="168" text-anchor="middle" fill="#c8ccd0" font-size="30" font-weight="bold">2:15</text>
+<text x="299.0" y="196" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold">Projekt A</text>
+<text x="299.0" y="240" text-anchor="middle" fill="#8b93a1" font-size="14">heute gebucht</text>
+<rect x="418" y="60" width="150" height="150" rx="14" fill="#0b83d9"/>
+<text x="493.0" y="196" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold">Projekt A</text>
+<text x="493.0" y="240" text-anchor="middle" fill="#8b93a1" font-size="14">heute nichts</text>
+<text x="30" y="290" fill="#6b7280" font-size="12">Zeiten immer H:MM und immer die heutige Gesamtzeit auf diesem Projekt, nicht der laufende Abschnitt.</text>
+</svg>

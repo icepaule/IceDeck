@@ -1,0 +1,53 @@
+{
+  "brightness": 60,
+  "mqtt": {
+    "host": "mqtt.example.lan",
+    "port": 1883,
+    "topic_prefix": "streamdeck",
+    "username": "AENDERN",
+    "password": "AENDERN"
+  },
+  "_hinweis": "Schluessel sind 0-basiert. Taste 1 oben links = 0, Taste 10 = 9.",
+  "keys": {
+    "0": {
+      "label": "Projekt A",
+      "color": "#0b83d9",
+      "color_active": "#1f7a3d"
+    },
+    "1": {
+      "label": "Projekt B",
+      "color": "#525266",
+      "color_active": "#1f7a3d"
+    },
+    "2": {
+      "label": "Projekt C",
+      "color": "#9ccc65",
+      "color_active": "#1f7a3d"
+    },
+    "3": {
+      "label": "Projekt D",
+      "color": "#e36a00",
+      "color_active": "#1f7a3d"
+    },
+    "4": {
+      "label": "Heute",
+      "color": "#16213e",
+      "type": "today"
+    },
+    "5": {
+      "label": "Projekt F",
+      "color": "#c7af14",
+      "color_active": "#1f7a3d"
+    },
+    "6": {
+      "label": "Projekt G",
+      "color": "#2da608",
+      "color_active": "#1f7a3d"
+    },
+    "9": {
+      "label": "Projekt J",
+      "color": "#ffca28",
+      "color_active": "#1f7a3d"
+    }
+  }
+}

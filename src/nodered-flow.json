@@ -1,0 +1,307 @@
+[
+    {
+        "id": "sd-tab",
+        "type": "tab",
+        "label": "Stream Deck -> Solidtime",
+        "disabled": false,
+        "info": "Toggle-Logik fuer das Stream Deck.\n\nTastendruck kommt per MQTT auf streamdeck/button/<n> (0-basiert).\nDer Flow fragt den laufenden Eintrag ab und entscheidet:\n  gleiches Projekt laeuft -> stoppen\n  anderes Projekt laeuft  -> stoppen und neu starten\n  nichts laeuft           -> starten\n\nDanach wird die heutige Arbeitszeit ermittelt und der Gesamtzustand\nretained auf streamdeck/state gemeldet.\n\nToken NICHT hier eintragen, sondern als Umgebungsvariable\nSOLIDTIME_TOKEN setzen (Node-RED Addon -> Konfiguration)."
+    },
+    {
+        "id": "sd-note",
+        "type": "comment",
+        "z": "sd-tab",
+        "name": "Tastenbelegung im Knoten 'Vorbereiten' anpassen",
+        "info": "",
+        "x": 240,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "sd-in",
+        "type": "mqtt in",
+        "z": "sd-tab",
+        "name": "Tastendruck",
+        "topic": "streamdeck/button/+",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "sd-broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 100,
+        "wires": [
+            [
+                "sd-prep"
+            ]
+        ]
+    },
+    {
+        "id": "sd-tick",
+        "type": "inject",
+        "z": "sd-tab",
+        "name": "Resync alle 60s",
+        "props": [
+            {
+                "p": "resync",
+                "v": "true",
+                "vt": "bool"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "",
+        "x": 140,
+        "y": 160,
+        "wires": [
+            [
+                "sd-prep"
+            ]
+        ]
+    },
+    {
+        "id": "sd-prep",
+        "type": "function",
+        "z": "sd-tab",
+        "name": "Vorbereiten",
+        "func": "// ---- Konfiguration -------------------------------------------------\n// Zugang kommt aus settings.js -> functionGlobalContext (Datei /config/solidtime.json,\n// chmod 600). Fallback auf Umgebungsvariablen, damit der Flow auch in einem\n// Node-RED ohne diesen Patch laeuft. Ein Flow-Export enthaelt so nie den Token.\nconst SD = global.get('solidtime') || {};\nconst CFG = {\n    base:   SD.url   || env.get('SOLIDTIME_URL')   || 'http://solidtime.example.lan:8000',\n    token:  SD.token || env.get('SOLIDTIME_TOKEN') || '',\n    org:    '00000000-0000-0000-0000-00000000ORG1',   // Organisation\n    member: '00000000-0000-0000-0000-0000000MEMB1',   // eigene Mitgliedschaft in dieser Organisation\n    user:   '00000000-0000-0000-0000-0000000USER1',   // fuer die Tagessumme\n    tz:     'Europe/Berlin',\n\n    // Tastennummer 0-basiert: Taste 1 oben links = 0.\n    // Taste 5 (Index 4) ist reine Anzeige und taucht hier bewusst nicht auf.\n    keys: {\n        0: { project_id: '00000000-0000-0000-0000-00000000PRJ0', description: 'Projekt A' },\n        1: { project_id: '00000000-0000-0000-0000-00000000PRJ1', description: 'Projekt B' },\n        2: { project_id: '00000000-0000-0000-0000-00000000PRJ2', description: 'Projekt C' },\n        3: { project_id: '00000000-0000-0000-0000-00000000PRJ3', description: 'Projekt D' },\n        5: { project_id: '00000000-0000-0000-0000-00000000PRJ5', description: 'Projekt F' },\n        6: { project_id: '00000000-0000-0000-0000-00000000PRJ6', description: 'Projekt G' },\n        9: { project_id: '00000000-0000-0000-0000-00000000PRJ9', description: 'Projekt J' }\n    }\n};\n// --------------------------------------------------------------------\n\nif (!CFG.token) {\n    node.error('SOLIDTIME_TOKEN ist nicht gesetzt', msg);\n    return null;\n}\nflow.set('cfg', CFG);\n\nmsg.headers = {\n    'Authorization': 'Bearer ' + CFG.token,\n    'Accept': 'application/json',\n    'Content-Type': 'application/json'\n};\nmsg.method = 'GET';\nmsg.url = CFG.base + '/api/v1/organizations/' + CFG.org + '/time-entries?active=true';\n\n// Taste aus dem Topic streamdeck/button/<n>; beim Resync-Tick keine\nconst m = /button\\/(\\d+)$/.exec(msg.topic || '');\nmsg.pressedKey = m ? Number(m[1]) : null;\nmsg.payload = '';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 130,
+        "wires": [
+            [
+                "sd-get-active"
+            ]
+        ]
+    },
+    {
+        "id": "sd-get-active",
+        "type": "http request",
+        "z": "sd-tab",
+        "name": "GET laufender Eintrag",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": true,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 590,
+        "y": 130,
+        "wires": [
+            [
+                "sd-decide"
+            ]
+        ]
+    },
+    {
+        "id": "sd-decide",
+        "type": "function",
+        "z": "sd-tab",
+        "name": "Entscheiden",
+        "func": "const CFG = flow.get('cfg');\n\n// Node-RED ersetzt msg.headers nach jeder Antwort durch die RESPONSE-Header.\n// Vor jeder weiteren Anfrage muessen sie daher neu gesetzt werden - sonst geht\n// der Authorization-Header verloren und der HTTP-Client bekommt Antwort-Header\n// als Anfrage-Header untergeschoben.\nconst authHeaders = () => ({\n    'Authorization': 'Bearer ' + CFG.token,\n    'Accept': 'application/json',\n    'Content-Type': 'application/json'\n});\n\n\nif (msg.statusCode && msg.statusCode >= 300) {\n    node.error('Solidtime GET fehlgeschlagen: HTTP ' + msg.statusCode, msg);\n    return null;\n}\n\nconst data   = (msg.payload && msg.payload.data) || [];\nconst active = Array.isArray(data) ? (data[0] || null) : (data || null);\nconst key    = msg.pressedKey;\nconst target = (key !== null) ? CFG.keys[key] : null;\n\n// Sekundengenaue ISO-Zeit in UTC, wie Solidtime sie liefert\nconst now = new Date().toISOString().replace(/\\.\\d+Z$/, 'Z');\nmsg.now = now;\nmsg.active = active;\n\n// Resync-Tick, Anzeigetaste oder unbelegte Taste: nur Zustand melden\nif (!target) {\n    msg.startAfter = null;\n    return [null, msg];\n}\n\nconst stopReq = () => {\n    msg.headers = authHeaders();\n    msg.method = 'PUT';\n    msg.url = CFG.base + '/api/v1/organizations/' + CFG.org + '/time-entries/' + active.id;\n    msg.payload = { member_id: CFG.member, start: active.start, end: now };\n};\n\nif (active && active.project_id === target.project_id) {\n    stopReq();                 // gleiches Projekt -> aus\n    msg.startAfter = null;\n    return [msg, null];\n}\nif (active) {\n    stopReq();                 // anderes Projekt -> umschalten\n    msg.startAfter = target;\n    return [msg, null];\n}\nmsg.startAfter = target;       // nichts laeuft -> an\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 230,
+        "wires": [
+            [
+                "sd-stop"
+            ],
+            [
+                "sd-startgate"
+            ]
+        ]
+    },
+    {
+        "id": "sd-stop",
+        "type": "http request",
+        "z": "sd-tab",
+        "name": "PUT Timer stoppen",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": true,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 600,
+        "y": 200,
+        "wires": [
+            [
+                "sd-startgate"
+            ]
+        ]
+    },
+    {
+        "id": "sd-startgate",
+        "type": "function",
+        "z": "sd-tab",
+        "name": "Starten?",
+        "func": "const CFG = flow.get('cfg');\n\n// Node-RED ersetzt msg.headers nach jeder Antwort durch die RESPONSE-Header.\n// Vor jeder weiteren Anfrage muessen sie daher neu gesetzt werden - sonst geht\n// der Authorization-Header verloren und der HTTP-Client bekommt Antwort-Header\n// als Anfrage-Header untergeschoben.\nconst authHeaders = () => ({\n    'Authorization': 'Bearer ' + CFG.token,\n    'Accept': 'application/json',\n    'Content-Type': 'application/json'\n});\n\n\nif (msg.statusCode && msg.statusCode >= 300) {\n    node.error('Solidtime Stop fehlgeschlagen: HTTP ' + msg.statusCode, msg);\n    return null;\n}\n\nif (!msg.startAfter) {\n    return [null, msg];        // nichts zu starten -> weiter zur Tagessumme\n}\n\nmsg.headers = authHeaders();\nmsg.method = 'POST';\nmsg.url = CFG.base + '/api/v1/organizations/' + CFG.org + '/time-entries';\nmsg.payload = {\n    member_id:   CFG.member,\n    start:       msg.now,\n    end:         null,\n    project_id:  msg.startAfter.project_id,\n    description: msg.startAfter.description || '',\n    billable:    false\n};\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 330,
+        "wires": [
+            [
+                "sd-start"
+            ],
+            [
+                "sd-today-prep"
+            ]
+        ]
+    },
+    {
+        "id": "sd-start",
+        "type": "http request",
+        "z": "sd-tab",
+        "name": "POST Timer starten",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": true,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 600,
+        "y": 300,
+        "wires": [
+            [
+                "sd-today-prep"
+            ]
+        ]
+    },
+    {
+        "id": "sd-today-prep",
+        "type": "function",
+        "z": "sd-tab",
+        "name": "Tagessumme anfragen",
+        "func": "const CFG = flow.get('cfg');\n\n// Node-RED ersetzt msg.headers nach jeder Antwort durch die RESPONSE-Header.\n// Vor jeder weiteren Anfrage muessen sie daher neu gesetzt werden - sonst geht\n// der Authorization-Header verloren und der HTTP-Client bekommt Antwort-Header\n// als Anfrage-Header untergeschoben.\nconst authHeaders = () => ({\n    'Authorization': 'Bearer ' + CFG.token,\n    'Accept': 'application/json',\n    'Content-Type': 'application/json'\n});\n\n\nif (msg.statusCode && msg.statusCode >= 300) {\n    node.error('Solidtime Start fehlgeschlagen: HTTP ' + msg.statusCode, msg);\n}\n\n// Aktuellen Deck-Zustand aus der letzten Antwort merken.\n// Nach POST kommt ein Objekt, nach GET ein Array zurueck.\nconst d = msg.payload && msg.payload.data;\nconst entry = Array.isArray(d) ? (d[0] || null) : (d || null);\n\nlet activeKey = null, startedAt = null;\nif (entry && !entry.end) {\n    startedAt = entry.start;\n    for (const k of Object.keys(CFG.keys)) {\n        if (CFG.keys[k].project_id === entry.project_id) { activeKey = Number(k); break; }\n    }\n}\nmsg.deckState = { active_key: activeKey, started_at: startedAt };\n\n// Lokale Mitternacht in UTC - unabhaengig von der Zeitzone des Servers.\nconst now = new Date();\nconst p = new Intl.DateTimeFormat('en-US', {\n    timeZone: CFG.tz, hour12: false,\n    hour: '2-digit', minute: '2-digit', second: '2-digit'\n}).formatToParts(now).reduce((a, x) => (a[x.type] = x.value, a), {});\nconst intoDay = ((+p.hour) % 24) * 3600 + (+p.minute) * 60 + (+p.second);\nconst midnight = new Date(now.getTime() - intoDay * 1000)\n    .toISOString().replace(/\\.\\d+Z$/, 'Z');\n\nmsg.headers = authHeaders();\nmsg.method = 'GET';\nmsg.url = CFG.base + '/api/v1/organizations/' + CFG.org\n        + '/time-entries?limit=500&user_id=' + CFG.user\n        + '&start=' + encodeURIComponent(midnight);\nmsg.payload = '';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 430,
+        "wires": [
+            [
+                "sd-today-get"
+            ]
+        ]
+    },
+    {
+        "id": "sd-today-get",
+        "type": "http request",
+        "z": "sd-tab",
+        "name": "GET heutige Eintraege",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": true,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 610,
+        "y": 430,
+        "wires": [
+            [
+                "sd-state"
+            ]
+        ]
+    },
+    {
+        "id": "sd-state",
+        "type": "function",
+        "z": "sd-tab",
+        "name": "Zustand bauen",
+        "func": "const CFG = flow.get('cfg');\nconst st  = msg.deckState || { active_key: null, started_at: null };\n\n// project_id -> Tastennummer\nconst keyOf = {};\nfor (const k of Object.keys(CFG.keys)) keyOf[CFG.keys[k].project_id] = Number(k);\n\nlet base = 0;                 // heute abgeschlossen, alle Projekte\nconst byKey = {};             // heute abgeschlossen, je Taste\nif (!msg.statusCode || msg.statusCode < 300) {\n    const rows = (msg.payload && msg.payload.data) || [];\n    for (const r of rows) {\n        if (r.user_id && r.user_id !== CFG.user) continue;  // nur eigene\n        if (!r.end) continue;                               // laufenden auslassen\n        const d = r.duration || 0;\n        base += d;\n        const k = keyOf[r.project_id];\n        if (k !== undefined) byKey[k] = (byKey[k] || 0) + d;\n    }\n} else {\n    node.warn('Tagessumme nicht ermittelbar: HTTP ' + msg.statusCode);\n}\n\nmsg.topic   = 'streamdeck/state';\nmsg.payload = {\n    active_key:         st.active_key,\n    started_at:         st.started_at,\n    today_base_seconds: base,\n    today_by_key:       byKey\n};\nmsg.retain = true;\nmsg.qos    = 1;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 520,
+        "wires": [
+            [
+                "sd-out"
+            ]
+        ]
+    },
+    {
+        "id": "sd-out",
+        "type": "mqtt out",
+        "z": "sd-tab",
+        "name": "Zustand ans Deck",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "sd-broker",
+        "x": 600,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "sd-broker",
+        "type": "mqtt-broker",
+        "name": "Mosquitto",
+        "broker": "core-mosquitto",
+        "port": "1883",
+        "clientid": "nodered-streamdeck",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    }
+]

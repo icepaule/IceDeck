@@ -1,0 +1,18 @@
+[Unit]
+Description=Stream Deck <-> MQTT Bruecke fuer Solidtime
+After=network-online.target
+Wants=network-online.target
+# Deck haengt am USB: nach Replug oder MQTT-Ausfall unbegrenzt neu starten
+StartLimitBurst=0
+
+[Service]
+Type=simple
+User=CHANGEME
+SupplementaryGroups=plugdev
+Environment=SDB_CONFIG=/etc/icedeck/config.json
+ExecStart=/opt/icedeck/venv/bin/python /opt/icedeck/streamdeck_bridge.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

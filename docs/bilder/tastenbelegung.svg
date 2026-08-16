@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="706" height="484" viewBox="0 0 706 484" role="img" aria-label="Tastenbelegung des Stream Deck">
+<style>text{font-family:"DejaVu Sans",Verdana,sans-serif}</style>
+<rect width="706" height="484" rx="18" fill="#14161c"/>
+<text x="353.0" y="30" text-anchor="middle" fill="#8b93a1" font-size="15">Stream Deck (15 Tasten) &#8211; Zaehlung wie aufgedruckt, Index im Code ist 0-basiert</text>
+<rect x="26" y="46" width="118" height="118" rx="12" fill="#0b83d9"/>
+<text x="35" y="67" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">1</text>
+<text x="85.0" y="116" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold">Projekt A</text>
+<text x="85.0" y="144" text-anchor="middle" fill="#ffffff" fill-opacity="0.75" font-size="13">Index 0</text>
+<rect x="160" y="46" width="118" height="118" rx="12" fill="#525266"/>
+<text x="169" y="67" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">2</text>
+<text x="219.0" y="116" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold">Projekt B</text>
+<text x="219.0" y="144" text-anchor="middle" fill="#ffffff" fill-opacity="0.75" font-size="13">Index 1</text>
+<rect x="294" y="46" width="118" height="118" rx="12" fill="#9ccc65"/>
+<text x="303" y="67" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">3</text>
+<text x="353.0" y="116" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold">Projekt C</text>
+<text x="353.0" y="144" text-anchor="middle" fill="#ffffff" fill-opacity="0.75" font-size="13">Index 2</text>
+<rect x="428" y="46" width="118" height="118" rx="12" fill="#e36a00"/>
+<text x="437" y="67" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">4</text>
+<text x="487.0" y="116" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold">Projekt D</text>
+<text x="487.0" y="144" text-anchor="middle" fill="#ffffff" fill-opacity="0.75" font-size="13">Index 3</text>
+<rect x="562" y="46" width="118" height="118" rx="12" fill="#16213e"/>
+<text x="571" y="67" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">5</text>
+<text x="621.0" y="108" text-anchor="middle" fill="#3ddc84" font-size="27" font-weight="bold">2:01</text>
+<text x="621.0" y="138" text-anchor="middle" fill="#9aa0a6" font-size="15">Heute</text>
+<text x="621.0" y="156" text-anchor="middle" fill="#6b7280" font-size="11">Anzeige</text>
+<rect x="26" y="180" width="118" height="118" rx="12" fill="#c7af14"/>
+<text x="35" y="201" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">6</text>
+<text x="85.0" y="250" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold">Projekt F</text>
+<text x="85.0" y="278" text-anchor="middle" fill="#ffffff" fill-opacity="0.75" font-size="13">Index 5</text>
+<rect x="160" y="180" width="118" height="118" rx="12" fill="#2da608"/>
+<text x="169" y="201" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">7</text>
+<text x="219.0" y="250" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold">Projekt G</text>
+<text x="219.0" y="278" text-anchor="middle" fill="#ffffff" fill-opacity="0.75" font-size="13">Index 6</text>
+<rect x="294" y="180" width="118" height="118" rx="12" fill="#23262e" stroke="#2f333d" stroke-width="2"/>
+<text x="303" y="201" fill="#ffffff" fill-opacity="0.3" font-size="13" font-weight="bold">8</text>
+<text x="353.0" y="245.0" text-anchor="middle" fill="#4b5160" font-size="13">frei</text>
+<rect x="428" y="180" width="118" height="118" rx="12" fill="#23262e" stroke="#2f333d" stroke-width="2"/>
+<text x="437" y="201" fill="#ffffff" fill-opacity="0.3" font-size="13" font-weight="bold">9</text>
+<text x="487.0" y="245.0" text-anchor="middle" fill="#4b5160" font-size="13">frei</text>
+<rect x="562" y="180" width="118" height="118" rx="12" fill="#ffca28"/>
+<text x="571" y="201" fill="#ffffff" fill-opacity="0.85" font-size="13" font-weight="bold">10</text>
+<text x="621.0" y="250" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold">Projekt J</text>
+<text x="621.0" y="278" text-anchor="middle" fill="#ffffff" fill-opacity="0.75" font-size="13">Index 9</text>
+<rect x="26" y="314" width="118" height="118" rx="12" fill="#23262e" stroke="#2f333d" stroke-width="2"/>
+<text x="35" y="335" fill="#ffffff" fill-opacity="0.3" font-size="13" font-weight="bold">11</text>
+<text x="85.0" y="379.0" text-anchor="middle" fill="#4b5160" font-size="13">frei</text>
+<rect x="160" y="314" width="118" height="118" rx="12" fill="#23262e" stroke="#2f333d" stroke-width="2"/>
+<text x="169" y="335" fill="#ffffff" fill-opacity="0.3" font-size="13" font-weight="bold">12</text>
+<text x="219.0" y="379.0" text-anchor="middle" fill="#4b5160" font-size="13">frei</text>
+<rect x="294" y="314" width="118" height="118" rx="12" fill="#23262e" stroke="#2f333d" stroke-width="2"/>
+<text x="303" y="335" fill="#ffffff" fill-opacity="0.3" font-size="13" font-weight="bold">13</text>
+<text x="353.0" y="379.0" text-anchor="middle" fill="#4b5160" font-size="13">frei</text>
+<rect x="428" y="314" width="118" height="118" rx="12" fill="#23262e" stroke="#2f333d" stroke-width="2"/>
+<text x="437" y="335" fill="#ffffff" fill-opacity="0.3" font-size="13" font-weight="bold">14</text>
+<text x="487.0" y="379.0" text-anchor="middle" fill="#4b5160" font-size="13">frei</text>
+<rect x="562" y="314" width="118" height="118" rx="12" fill="#23262e" stroke="#2f333d" stroke-width="2"/>
+<text x="571" y="335" fill="#ffffff" fill-opacity="0.3" font-size="13" font-weight="bold">15</text>
+<text x="621.0" y="379.0" text-anchor="middle" fill="#4b5160" font-size="13">frei</text>
+<text x="26" y="470" fill="#8b93a1" font-size="13">Taste 5 ist reine Anzeige und loest bewusst nichts aus. Freie Tasten bleiben schwarz.</text>
+</svg>
